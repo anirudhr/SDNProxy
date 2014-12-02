@@ -12,8 +12,9 @@ Controller flow:
                           /    |   \                  |
                          / Denies   \            Install flow
                         /   (403)    \
-      Prune aged unused rules        * Blacklisted domains (read using ConfigParser) get denied.
-      (Future?)                        - Blacklisting can be on a per-user /
+      Prune aged unused rules        * Blacklisted domains get denied.
+      (Future?)                        - Read blacklist with ConfigParser
+                                       - Blacklisting can be on a per-user /
                                          per-group basis too
                                      * Future: filter responses based on
                                        content: block multimedia, suspect files,
