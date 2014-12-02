@@ -16,4 +16,5 @@ Controller flow:
       (Future?)                        - Blacklisting can be on a per-user /
                                          per-group basis too
                                      * Future: filter responses based on
-                                       content: block multimedia, suspect files, etc.
+                                       content: block multimedia, suspect files,
+                                       etc.
