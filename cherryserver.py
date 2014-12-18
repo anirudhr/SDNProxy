@@ -6,17 +6,34 @@
 import cherryproxy
 import logging
 import struct
+import xmlrpclib
 
+# CONNFILE = 'request_list'
+# def markRequest(conn_name):
+    # try:
+        # with open(CONNFILE) as f:
+            # contents = f.read()
+            # f.close()
+    # except IOError as e:
+        # if e.errno == 2 and e.strerror == 'No such file or directory':
+            # contents = ''
+        # else:
+            # print 'Terrible error, cannot recover, bye'
+            # exit()
+    # if not conn_name in contents:
+        # with open(CONNFILE, 'a') as f:
+            # f.write(conn_name + '\n')
+            # f.close()
 class SDNProxy(cherryproxy.CherryProxy):
-    def getBlacklist(self, filename='domain_blacklist'):
-        with open(filename) as f:
+    def __init__(self, *args, **kwargs):
+        super(SDNProxy, self).__init__(*args, **kwargs)
+        with open('domain_blacklist') as f:
             blist = f.readlines()
             f.close()
-        blacklist = [x.rstrip() for x in blist]
-        return blacklist
+        self.blacklist = [x.rstrip() for x in blist]
+        self.switch = xmlrpclib.ServerProxy("http://localhost:8000/")
     def filter_request_headers(self):
         #self.log.debug(header location)
-        self.blacklist = self.getBlacklist()
         if self.req.netloc in self.blacklist:
             msg = "Request to " + self.req.netloc + " blocked by self.blacklist policy"
             self.req.log.warning(msg)
@@ -24,7 +41,7 @@ class SDNProxy(cherryproxy.CherryProxy):
         else:
             msg = "Request to " + self.req.netloc + " passed."
             self.req.log.info(msg)
-            #SDN stuff here
+            self.switch.authorize('192.168.57.5') #When we find a way to get the client IP, we will authorize it instead and pass a 302 back to the client to tell it to directly connect
     
     def filter_response_headers(self):
         pass

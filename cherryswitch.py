@@ -2,9 +2,12 @@
 A switch that content-filters HTTP traffic
 """
 
-import cherryproxy
+#import cherryproxy
 import logging
 import struct
+
+import xmlrpclib
+from SimpleXMLRPCServer import SimpleXMLRPCServer
 
 from ryu.base import app_manager
 from ryu.controller import mac_to_port
@@ -19,21 +22,22 @@ from ryu.lib.packet import ethernet
 from ryu.lib.packet import tcp
 from ryu.lib.packet import ipv4
 
-class CherrySwitch(app_manager.RyuApp, cherryproxy.CherryProxy):
+WHITELIST = list()
+def authorize(ip):
+    if not ip in WHITELIST:
+        WHITELIST.append(ip)
+
+class CherrySwitch(app_manager.RyuApp):#, cherryproxy.CherryProxy):
     OFP_VERSIONS = [ofproto_v1_0.OFP_VERSION]
-    
-    def getBlacklist(self, filename='domain_blacklist'):
-        with open(filename) as f:
-            blist = f.readlines()
-            f.close()
-        blacklist = [x.rstrip() for x in blist]
-        return blacklist
 
     def __init__(self, *args, **kwargs):
-        self.IPADDR = '192.168.57.5'
-        self.blacklist = self.getBlacklist()
+        #self.IPADDR = '192.168.57.5'
         super(CherrySwitch, self).__init__(*args, **kwargs)
         self.mac_to_port = {}
+        server = SimpleXMLRPCServer(("localhost", 8000))
+        print "Listening for RPC calls from cherryserver on port 8000..."
+        server.register_function(authorize, "authorize")
+        server.serve_forever()
 
     def add_flow(self, datapath, in_port, dst, actions):
         ofproto = datapath.ofproto
@@ -84,9 +88,10 @@ class CherrySwitch(app_manager.RyuApp, cherryproxy.CherryProxy):
         else:
             out_port = ofproto.OFPP_FLOOD
 
-        if False:#dstport == 80 and srcip != '192.168.57.5':
+        if dstport == 80 and not srcip in WHITELIST:
             actions = [] #blank actions leads to dropping of packet
             self.logger.info("HTTP packet dropped")
+            self.logger.info("Whitelist: " + str(WHITELIST))
         else:
             actions = [datapath.ofproto_parser.OFPActionOutput(out_port)]
             self.logger.info("packet allowed out through %s", out_port)
