@@ -6,8 +6,8 @@ A switch that content-filters HTTP traffic
 import logging
 import struct
 
-import xmlrpclib
-from SimpleXMLRPCServer import SimpleXMLRPCServer
+#import xmlrpclib
+#from SimpleXMLRPCServer import SimpleXMLRPCServer
 
 from ryu.base import app_manager
 from ryu.controller import mac_to_port
@@ -22,10 +22,10 @@ from ryu.lib.packet import ethernet
 from ryu.lib.packet import tcp
 from ryu.lib.packet import ipv4
 
-WHITELIST = list()
-def authorize(ip):
-    if not ip in WHITELIST:
-        WHITELIST.append(ip)
+#WHITELIST = list()
+# def authorize(ip):
+    # if not ip in WHITELIST:
+        # WHITELIST.append(ip)
 
 class CherrySwitch(app_manager.RyuApp):#, cherryproxy.CherryProxy):
     OFP_VERSIONS = [ofproto_v1_0.OFP_VERSION]
@@ -34,10 +34,11 @@ class CherrySwitch(app_manager.RyuApp):#, cherryproxy.CherryProxy):
         #self.IPADDR = '192.168.57.5'
         super(CherrySwitch, self).__init__(*args, **kwargs)
         self.mac_to_port = {}
-        server = SimpleXMLRPCServer(("localhost", 8000))
-        print "Listening for RPC calls from cherryserver on port 8000..."
-        server.register_function(authorize, "authorize")
-        server.serve_forever()
+        self.CONNFILE = 'request_list'
+        #server = SimpleXMLRPCServer(("localhost", 8000))
+        #print "Listening for RPC calls from cherryserver on port 8000..."
+        #server.register_function(authorize, "authorize")
+        #server.serve_forever()
 
     def add_flow(self, datapath, in_port, dst, actions):
         ofproto = datapath.ofproto
@@ -87,7 +88,11 @@ class CherrySwitch(app_manager.RyuApp):#, cherryproxy.CherryProxy):
             out_port = self.mac_to_port[dpid][dst]
         else:
             out_port = ofproto.OFPP_FLOOD
-
+        
+        with open(self.CONNFILE) as f:
+            wlist = f.readlines()
+            f.close()
+        WHITELIST = [x.rstrip() for x in wlist]
         if dstport == 80 and not srcip in WHITELIST:
             actions = [] #blank actions leads to dropping of packet
             self.logger.info("HTTP packet dropped")
