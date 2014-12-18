@@ -40,7 +40,7 @@ class SDNProxy(cherryproxy.CherryProxy):
         else:
             msg = "Request to " + self.req.netloc + " passed."
             self.req.log.info(msg)
-            self.markRequest('192.168.57.5') #self.switch.authorize('192.168.57.5') #When we find a way to get the client IP, we will authorize it instead and pass a 302 back to the client to tell it to directly connect
+            self.markRequest('10.0.0.1') #self.switch.authorize('192.168.57.5') #When we find a way to get the client IP, we will authorize it instead and pass a 302 back to the client to tell it to directly connect
     
     def filter_response_headers(self):
         pass

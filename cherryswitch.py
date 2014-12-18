@@ -81,14 +81,6 @@ class CherrySwitch(app_manager.RyuApp):#, cherryproxy.CherryProxy):
         self.logger.info("packet in %s %s %s %s", dpid, src, dst, msg.in_port)
         self.logger.info("dstport = %s, srcip = %s", dstport, srcip)
         
-        # learn a mac address to avoid FLOOD next time.
-        self.mac_to_port[dpid][src] = msg.in_port
-
-        if dst in self.mac_to_port[dpid]:
-            out_port = self.mac_to_port[dpid][dst]
-        else:
-            out_port = ofproto.OFPP_FLOOD
-        
         with open(self.CONNFILE) as f:
             wlist = f.readlines()
             f.close()
@@ -98,12 +90,18 @@ class CherrySwitch(app_manager.RyuApp):#, cherryproxy.CherryProxy):
             self.logger.info("HTTP packet dropped")
             self.logger.info("Whitelist: " + str(WHITELIST))
         else:
+            # learn a mac address to avoid FLOOD next time.
+            self.mac_to_port[dpid][src] = msg.in_port
+    
+            if dst in self.mac_to_port[dpid]:
+                out_port = self.mac_to_port[dpid][dst]
+            else:
+                out_port = ofproto.OFPP_FLOOD
             actions = [datapath.ofproto_parser.OFPActionOutput(out_port)]
             self.logger.info("packet allowed out through %s", out_port)
-
-        # install a flow to avoid packet_in next time
-        if out_port != ofproto.OFPP_FLOOD:
-            self.add_flow(datapath, msg.in_port, dst, actions)
+            # install a flow to avoid packet_in next time
+            if out_port != ofproto.OFPP_FLOOD:
+                self.add_flow(datapath, msg.in_port, dst, actions)
 
         out = datapath.ofproto_parser.OFPPacketOut(
             datapath=datapath, buffer_id=msg.buffer_id, in_port=msg.in_port,
